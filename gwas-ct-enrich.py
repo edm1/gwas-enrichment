@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/usr/bin/env python2
 # -*- coding: utf-8 -*-
 #
 
@@ -55,6 +55,8 @@ def main():
     # Exclude test SNPs that are in high LD
     print("Excluding high r2 test snps...")
     refdf_test, refdf_excluded = exclude_test_snps(refdf_test)
+    print(" {0} test snps excluded".format(refdf_excluded.shape[0]))
+    print(" {0} test snps kept".format(refdf_test.shape[0]))
 
     # Give warning if nullsize is greater than pool of null snps
     if args.topthresh > refdf_null.shape[0]:
@@ -62,12 +64,8 @@ def main():
                    "null snps.")
         print(message)
     
-    # Calc how many null SNPs to sample per test snp
-    nullpertest = int(args.nullsize / refdf_test.shape[0]) + 1
-    print(" {0} null snps will be sampled per test snp".format(nullpertest))
-    
     # For each test snp sample null snps with a similar profile
-    sampled_df = sample_null_dist(refdf_test, refdf_null, nullpertest)
+    sampled_df = sample_null_dist(refdf_test, refdf_null)
 
     # Output test snps and sample dataframes
     print("Saving copy of sampled SNPs and test SNPs...")
@@ -95,24 +93,23 @@ def main():
     # Get test snps
     testdf_test = testdf.loc[refdf_test.index, :]
 
-    # Get np array of null dist stats
-    null_dist = np.array(sampled_df["stat"])
-
     # For each test SNP compare stat is null distribution
-    results = compare_tests_to_null(testdf_test, null_dist)
+    results = compare_tests_to_null(testdf_test, sampled_df)
 
-    # Write results to file
+    # Prepare results file
     print("Writing results...")
-    outname = args.out + "_enrichment.tsv"
     header = ["snp", "chr", "pos", "maf", "stat", "enrich_pval", "null_size"]
     results_df = pd.DataFrame(results, columns=header)
     results_df = results_df.sort("enrich_pval")
+    # Do multiple testing corrections
     results_df["padj_hs"] = multipletests(results_df["enrich_pval"],
                                           method="hs")[1]
     results_df["padj_bh"] = multipletests(results_df["enrich_pval"],
                                           method="fdr_bh")[1]
     results_df["padj_bon"] = multipletests(results_df["enrich_pval"],
                                           method="bonferroni")[1]
+    # Write file
+    outname = args.out + "_enrichment.tsv"
     results_df.to_csv(outname, sep="\t", header=True, index=False)
 
     # Close log
@@ -162,7 +159,6 @@ def exclude_test_snps(refdf_test):
         toexclude = toexclude.union(ld_dict[snp])
 
     # Make exclusions
-    print(toexclude)
     refdf_excluded = refdf_test.loc[refdf_test.index.isin(toexclude), :]
     refdf_keep = refdf_test.loc[~refdf_test.index.isin(toexclude), :]
 
@@ -196,13 +192,12 @@ def load_ldmap(filen, snplist):
     df = df.loc[df["r2"] > args.maxr2]
     return df
 
-def compare_tests_to_null(testdf_test, null_dist):
+def compare_tests_to_null(testdf_test, sampled_df):
     """ For each SNP in the test dataset, compare it to the null and produce
         results table
     """
     print("Comparing test SNPs to null distribution...")
     results = []
-    null_size = len(null_dist)
     for i in range(testdf_test.shape[0]):
 
         # Get test snp info
@@ -212,6 +207,11 @@ def compare_tests_to_null(testdf_test, null_dist):
         test_chrom = test_row["chr"]
         test_bp = test_row["bp"]
         test_stat = test_row["stat"]
+
+        # Get null dist
+        null_dist_df = sampled_df.loc[sampled_df["test_snp"] == test_name, :]
+        null_dist = np.array(null_dist_df["stat"])
+        null_size = len(null_dist)
 
         # Count how many times test stat is more extreme than null dist
         if args.test == "upper":
@@ -238,13 +238,15 @@ def compare_tests_to_null(testdf_test, null_dist):
 
     return results
 
-def sample_null_dist(refdf_test, refdf_null, nullpertest):
+def sample_null_dist(refdf_test, refdf_null):
     """ For each SNP in test set, finds SNPs with similar profile in null set
         and samples them to produce a null distribution.
     """
     print("Sampling distribution of null for each test snp...")
     firstiter = True
     for i in range(refdf_test.shape[0]):
+
+        nullsamplesize = args.nullsize
         
         # Get profile of test snp
         test_row = refdf_test.iloc[i, ]
@@ -289,20 +291,27 @@ def sample_null_dist(refdf_test, refdf_null, nullpertest):
         candidate_df = candidate_df.loc[~iscontained, :]
         print(candidate_df.shape)
 
-        # Warn if sample n is larger than candidate_df
-        if nullpertest > candidate_df.shape[0]:
-            message = (" Warning: nullpertest is greater than the number of "
-                       "SNPs matching test SNP profile.")
+        # Warnings
+        cand_size = candidate_df.shape[0]
+        if cand_size == 0:
+            # Warn and skip if no snps in candidate
+            message =  (" Warning: No null candidates matching {0} "
+                        "profile".format(test_name))
             print(message)
-        
-        # Warn and skip if no snps in candidate
-        if candidate_df.shape[0] == 0:
-            message =  " Warning: No null candidates matching {0} profile".format(test_name)
-            print(message)
+            # Skip
             continue
+        elif cand_size < nullsamplesize:
+            # Warn if sample n > candidate_df n and set n to cand size
+
+            message = [" Warning: test snp {0}".format(test_name),
+            " Warning: --nullsize {0} > candidate snps {1}".format(args.nullsize,
+                                                                   cand_size),
+            " Warning: setting --nullsize to candidate size"]
+            print("\n".join(message))
+            nullsamplesize = candidate_df.shape[0]
 
         # Take random sample of candidate_df snps
-        rand_idx = np.random.choice(candidate_df.shape[0], nullpertest,
+        rand_idx = np.random.choice(candidate_df.shape[0], nullsamplesize,
                                     replace=True)
         candidate_sample_df = candidate_df.iloc[rand_idx, :]
         candidate_sample_df["test_snp"] = test_name
@@ -359,7 +368,7 @@ def load_merge_ldscores(refdf, ldscfiles):
                                                       args.refstats),
                    " Warning: {0} snps have LD scores.".format(len(keys)),
                    " Warning: {0} snps missing LD scores.".format(len(missing)),
-                   " Warning: Snps with missing LD scores will be dropped. "]
+                   " Warning: snps with missing LD scores will be dropped. "]
         print("\n".join(message))
         with open(outname, "w") as out_h:
             for snp in missing:
