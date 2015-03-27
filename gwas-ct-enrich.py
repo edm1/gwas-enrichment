@@ -9,6 +9,7 @@ import numpy as np
 from HTSeq import GenomicInterval
 import gzip
 from operator import itemgetter
+from statsmodels.sandbox.stats.multicomp import multipletests
 
 def main():
 
@@ -51,8 +52,9 @@ def main():
     print(" {0} test snps with p-value < {1} found".format(refdf_test.shape[0],
                                                            args.topthresh))
 
-    # Exclude test SNPs based on their proximity to each other
-    # refdf_test = exclude_test_snps(refdf_test)
+    # Exclude test SNPs that are in high LD
+    print("Excluding high r2 test snps...")
+    refdf_test, refdf_excluded = exclude_test_snps(refdf_test)
 
     # Give warning if nullsize is greater than pool of null snps
     if args.topthresh > refdf_null.shape[0]:
@@ -71,6 +73,8 @@ def main():
     print("Saving copy of sampled SNPs and test SNPs...")
     outname = args.out + "_test-snps.tsv"
     refdf_test.to_csv(outname, sep="\t", header=True, index=False)
+    outname = args.out + "_r2-excluded-test-snps.tsv"
+    refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
     outname = args.out + "_null-dist-snps.tsv"
     sampled_df.to_csv(outname, sep="\t", header=True, index=False)
 
@@ -99,15 +103,17 @@ def main():
 
     # Write results to file
     print("Writing results...")
-    header = ["snp", "chr", "pos", "maf", "stat", "enrich_pval", "null_size"]
     outname = args.out + "_enrichment.tsv"
-    with open(outname, "w") as out_h:
-        # Write header
-        out_h.write("\t".join(header) + "\n")
-        # Write each line
-        for line in sorted(results, key=itemgetter(5)):
-            line = [str(x) for x in line]
-            out_h.write("\t".join(line) + "\n")
+    header = ["snp", "chr", "pos", "maf", "stat", "enrich_pval", "null_size"]
+    results_df = pd.DataFrame(results, columns=header)
+    results_df = results_df.sort("enrich_pval")
+    results_df["padj_hs"] = multipletests(results_df["enrich_pval"],
+                                          method="hs")[1]
+    results_df["padj_bh"] = multipletests(results_df["enrich_pval"],
+                                          method="fdr_bh")[1]
+    results_df["padj_bon"] = multipletests(results_df["enrich_pval"],
+                                          method="bonferroni")[1]
+    results_df.to_csv(outname, sep="\t", header=True, index=False)
 
     # Close log
     if args.log == True:
@@ -115,13 +121,80 @@ def main():
 
     return 0
 
-# def exclude_test_snps(refdf_test):
-#     """ Removes SNPs that are close to each other.
-#     """
-#     # Sort by P-value so that we are always keeping the 
-#     refdf_test = refdf_test.sort("p")
-#     print(refdf_test.head())
-#     sys.exit()
+def exclude_test_snps(refdf_test):
+    """ Removes SNPs that are close to each other.
+    """
+    # Sort by P-value so that we are always keeping the 
+    refdf_test = refdf_test.sort("p")
+
+    # Load LD information
+    print(" loading LD map...")
+    ld_df = load_ldmap(args.ldmap, refdf_test["snp"])
+    if ld_df.shape[0] == 0:
+        return refdf_test
+
+    # Make into a dict
+    ld_dict = {}
+    pairs = zip(ld_df["snpA"], ld_df["snpB"])
+    for snpA, snpB in pairs:
+        # Add snpB to snpA
+        try:
+            ld_dict[snpA].add(snpB)
+        except KeyError:
+            ld_dict[snpA] = set([snpB])
+        # Recipricol
+        try:
+            ld_dict[snpB].add(snpA)
+        except KeyError:
+            ld_dict[snpB] = set([snpA])
+
+    # Find exclusions
+    print(" making exclusions...")
+    toexclude = set([])
+    for i in range(refdf_test.shape[0]):
+        # Get test snp info
+        row = refdf_test.iloc[i, :]
+        snp = row["snp"]
+        # Skip if already excluded or not in ld
+        if snp in toexclude or snp not in ld_dict:
+            continue
+        # Exclude LD snps
+        toexclude = toexclude.union(ld_dict[snp])
+
+    # Make exclusions
+    print(toexclude)
+    refdf_excluded = refdf_test.loc[refdf_test.index.isin(toexclude), :]
+    refdf_keep = refdf_test.loc[~refdf_test.index.isin(toexclude), :]
+
+    return refdf_keep, refdf_excluded
+    
+
+def load_ldmap(filen, snplist):
+    """ Parses plink ld file to find snps in LD with those provided in snplist.
+        Returns pandas df.
+    """
+    snpset = set(snplist)
+    missingvals = set(args.missing)
+    data = []
+    with get_handle(filen) as in_h:
+        # Get header
+        header = in_h.readline()
+        # Iterate over lines
+        for line in in_h:
+            line = line.rstrip().split()
+            chrA, bpA, snpA, chrB, bpB, snpB, r2 = line
+            # If SNP is missing, make new snp name
+            if snpA in missingvals:
+                snpA = ":".join(chromA, bpA)
+            if snpB in missingvals:
+                snpB = ":".join(chromB, bpB)
+            # Add to rows if in refdf
+            if snpA in snpset and snpB in snpset:
+                data.append([snpA, snpB, float(r2)])
+    # Make df
+    df = pd.DataFrame(data, columns=["snpA", "snpB", "r2"])
+    df = df.loc[df["r2"] > args.maxr2]
+    return df
 
 def compare_tests_to_null(testdf_test, null_dist):
     """ For each SNP in the test dataset, compare it to the null and produce
@@ -286,8 +359,7 @@ def load_merge_ldscores(refdf, ldscfiles):
                                                       args.refstats),
                    " Warning: {0} snps have LD scores.".format(len(keys)),
                    " Warning: {0} snps missing LD scores.".format(len(missing)),
-                   " Warning: Snps with missing LD scores will be dropped. ",
-                   " Warning: Missing LD score SNPs will be written to file."]
+                   " Warning: Snps with missing LD scores will be dropped. "]
         print("\n".join(message))
         with open(outname, "w") as out_h:
             for snp in missing:
@@ -400,6 +472,9 @@ def parse_arguments():
               ' from https://github.com/bulik/ldsc/#where-can-i-get-ld-scores'),
         type=str,
         nargs="+")
+    parser.add_argument('ldmap', metavar="<plink ld file>",
+        help=('LD map output from plink --r2'),
+        type=str)
     parser.add_argument('--out', metavar="<out prefix>",
         help=('Output prefix. (default: out)'),
         type=str,
@@ -424,6 +499,11 @@ def parse_arguments():
              ' (default: 100,000)'),
         type=int,
         default=100000)
+    parser.add_argument('--maxr2', metavar="<float>",
+        help=('Test SNPs with r2 higher than this will be excluded. '
+              '(default: 0.7)'),
+        type=float,
+        default=0.7)
     
     # Null profile options
     parser.add_argument('--mafrange', metavar="<float>",
