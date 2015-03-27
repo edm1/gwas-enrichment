@@ -212,6 +212,8 @@ def compare_tests_to_null(testdf_test, sampled_df):
         null_dist_df = sampled_df.loc[sampled_df["test_snp"] == test_name, :]
         null_dist = np.array(null_dist_df["stat"])
         null_size = len(null_dist)
+        if null_size == 0: ############# TODO make this better
+        	continue
 
         # Count how many times test stat is more extreme than null dist
         if args.test == "upper":
