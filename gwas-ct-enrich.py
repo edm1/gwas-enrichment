@@ -102,12 +102,11 @@ def main():
     results_df = pd.DataFrame(results, columns=header)
     results_df = results_df.sort("enrich_pval")
     # Do multiple testing corrections
-    results_df["padj_hs"] = multipletests(results_df["enrich_pval"],
-                                          method="hs")[1]
-    results_df["padj_bh"] = multipletests(results_df["enrich_pval"],
+    results_df["padj_bh01"] = multipletests(results_df["enrich_pval"],
                                           method="fdr_bh")[1]
-    results_df["padj_bon"] = multipletests(results_df["enrich_pval"],
-                                          method="bonferroni")[1]
+    results_df["padj_bh05"] = multipletests(results_df["enrich_pval"],
+                                          method="fdr_bh",
+                                          alpha=0.05)[1]
     # Write file
     outname = args.out + "_enrichment.tsv"
     results_df.to_csv(outname, sep="\t", header=True, index=False)
@@ -213,7 +212,7 @@ def compare_tests_to_null(testdf_test, sampled_df):
         null_dist = np.array(null_dist_df["stat"])
         null_size = len(null_dist)
         if null_size == 0: ############# TODO make this better
-        	continue
+            continue
 
         # Count how many times test stat is more extreme than null dist
         if args.test == "upper":
@@ -257,7 +256,7 @@ def sample_null_dist(refdf_test, refdf_null):
         test_chrom = test_row["chr"]
         test_bp = test_row["bp"]
         test_p = -np.log10(test_row["p"])
-        test_l2 = test_row["l2"]
+        test_l2bin = test_row["l2_bin"]
 
         # Increase test interval by posrange
         test_interval = test_row["interval"]
@@ -282,10 +281,9 @@ def sample_null_dist(refdf_test, refdf_null):
         candidate_df = candidate_df.loc[mafinrange, :]
 
         # Keep SNPs where l2 score is in range
-        l2inrange = candidate_df.loc[:, "l2"].apply(maf_in_range,
-                                                    test_maf=test_l2,
-                                                    mafrange=args.ldscrange)
-        candidate_df = candidate_df.loc[l2inrange, :]
+        l2same = candidate_df["l2_bin"] == test_l2bin
+        candidate_df = candidate_df.loc[l2same, :]
+        print(candidate_df.shape)
 
         # Keep SNPs where interval outside test_interval_exp
         iscontained = candidate_df.loc[:, "interval"].apply(
@@ -378,6 +376,11 @@ def load_merge_ldscores(refdf, ldscfiles):
 
     # Merge l2 scores to refdf
     refdf["l2"] = refdf.loc[:, "snp"].apply(get_l2, l2_dict=l2_dict)
+
+    # Make percentile bins
+    bins = np.arange(0, 100, 100 / args.ldscbins)
+    perc = [0] + list(np.percentile(refdf["l2"], bins)) + [max(refdf["l2"]) + 1]
+    refdf["l2_bin"] = pd.cut(refdf["l2"], perc, include_lowest=True)
     
     # Drop rows with missing LD scores
     isnan = pd.isnull(refdf["l2"])
@@ -527,11 +530,10 @@ def parse_arguments():
               ' reference SNP. (default: 1,000,000)'),
         type=int,
         default=1000000)
-    parser.add_argument('--ldscrange', metavar="<int>",
-        help=('Max LD score deviation from reference SNP for inclusion in null.'
-              ' reference SNP. (default: 2)'),
+    parser.add_argument('--ldscbins', metavar="<int>",
+        help=('Number of bins to make for LD scores. (default: 10)'),
         type=float,
-        default=15) ################################# Needs changing ~~~~~~~~~~~~
+        default=10)
     
     # Add column name args
     parser.add_argument('--testcol', metavar="<str>",

@@ -5,4 +5,4 @@ ldmap=data/ldmap/unrelated-children_maf0.01_info0.8.ld.gz
 out=results/test1
 
 time python gwas-ct-enrich.py $t1 $t2 $ldsc $ldmap \
---nullsize 10000 --out $out --maxr2 0.5
+--nullsize 10000 --out $out --maxr2 0.5 --mafrange 0.05
