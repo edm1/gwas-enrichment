@@ -1,11 +1,18 @@
 #!/usr/bin/env bash
 #
 # Convert ensembl gene gtf to bed format and find overlapping SNPs
+# Usage:
+#   bash 2_gtf-to-bed.sh <gtf> <snp bed> <out pref>
 
 # In and out names
-ingtf=Homo_sapiens.GRCh37.75.gtf.gz      # GTF file with genomic features
-insnpbed=alspac_maf0.01_info0.8_snps.bed # SNP positions in bed format
-outpref=Homo_sapiens.GRCh37.75           # Output prefix
+
+ingtf=$1    # GTF file with genomic features
+insnpbed=$2 # SNP positions in bed format
+outpref=$3  # Output prefix
+
+# ingtf=Homo_sapiens.GRCh37.75.gtf.gz      # GTF file with genomic features
+# insnpbed=alspac_maf0.01_info0.8_snps.bed # SNP positions in bed format
+# outpref=Homo_sapiens.GRCh37.75           # Output prefix
 
 #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 # Extract genomic features in bed format
