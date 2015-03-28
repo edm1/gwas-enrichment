@@ -25,6 +25,7 @@ def main():
     # Parse args
     global args
     args = parse_arguments()
+    print_args(args)
     if args.features == None:
         args.features = []
 
@@ -123,6 +124,15 @@ def main():
         log_h.close()
 
     return 0
+
+def print_args(args):
+    """ Print args to log.
+    """
+    print("Run arguments:")
+    arg_dict = vars(args)
+    for k in arg_dict:
+        print(" {0}: {1}".format(k, arg_dict[k]))
+    print("")
 
 def bind_features(infile, refdf):
     """ Binds a column stating which each SNP is part of the feature set or not.
