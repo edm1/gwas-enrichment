@@ -3,6 +3,7 @@
 #
 
 import sys
+import os
 import argparse
 import pandas as pd
 import numpy as np
@@ -24,6 +25,8 @@ def main():
     # Parse args
     global args
     args = parse_arguments()
+    if args.features == None:
+        args.features = []
 
     # Set up log
     if args.log == True:
@@ -36,13 +39,17 @@ def main():
     refdf = load_sumstats(args.refstats)
     print(" done")
 
+    # Load additional genomic features
+    print("Loading addtional genomic features...")
+    feat_cols = []
+    for infile in args.features:
+        refdf, colname = bind_features(infile, refdf)
+        feat_cols.append(colname)
+
     # Merge LD scores to reference df
     print("Loading LD scores...")
     load_merge_ldscores(refdf, args.ldscstats)
     print(" done")
-
-    # Load additional genomic features
-    # TODO
 
     # Split refdf into test snps vs null snps
     print("Splitting test and null snps...")
@@ -65,7 +72,7 @@ def main():
         print(message)
     
     # For each test snp sample null snps with a similar profile
-    sampled_df = sample_null_dist(refdf_test, refdf_null)
+    sampled_df = sample_null_dist(refdf_test, refdf_null, feat_cols)
 
     # Output test snps and sample dataframes
     print("Saving copy of sampled SNPs and test SNPs...")
@@ -116,6 +123,26 @@ def main():
         log_h.close()
 
     return 0
+
+def bind_features(infile, refdf):
+    """ Binds a column stating which each SNP is part of the feature set or not.
+    """
+    colname = os.path.split(infile)[1].rsplit(".", 1)[0]
+
+    # Load a set of snps contained in feature
+    isfeature = set([])
+    with get_handle(infile, "r") as in_h:
+        for line in in_h:
+            snp = line.rstrip()
+            isfeature.add(snp)
+
+    # Make new column
+    refdf[colname] = refdf["snp"].apply(lambda x: x in isfeature)
+    
+    print(" " + colname)
+    print(refdf[colname].value_counts())
+
+    return refdf, colname
 
 def exclude_test_snps(refdf_test):
     """ Removes SNPs that are close to each other.
@@ -239,7 +266,7 @@ def compare_tests_to_null(testdf_test, sampled_df):
 
     return results
 
-def sample_null_dist(refdf_test, refdf_null):
+def sample_null_dist(refdf_test, refdf_null, feat_cols):
     """ For each SNP in test set, finds SNPs with similar profile in null set
         and samples them to produce a null distribution.
     """
@@ -257,6 +284,7 @@ def sample_null_dist(refdf_test, refdf_null):
         test_bp = test_row["bp"]
         test_p = -np.log10(test_row["p"])
         test_l2bin = test_row["l2_bin"]
+        print("\n sampling for snp: {0}".format(test_name))
 
         # Increase test interval by posrange
         test_interval = test_row["interval"]
@@ -264,32 +292,37 @@ def sample_null_dist(refdf_test, refdf_null):
                                             test_bp - args.posrange,
                                             test_bp + args.posrange,
                                             ".")
-        # Print info
-        # print("-Test snp: {0}".format(test_name))
-        # print("  -log10(p-val) = {0}".format(test_p))
-        # print("  maf = {0}".format(test_maf))
-        # print("  pos = {0}:{1}".format(test_chrom, test_bp))
 
         # Copy df of candidate SNPs
         candidate_df = refdf_null.copy()
-        print(candidate_df.shape)
+        print(" total candidates: {0}".format(candidate_df.shape[0]))
 
         # Keep SNPs where maf in range
         mafinrange = candidate_df.loc[:, "maf"].apply(maf_in_range,
                                                       test_maf=test_maf,
                                                       mafrange=args.mafrange)
         candidate_df = candidate_df.loc[mafinrange, :]
+        print(" after maf match: {0}".format(candidate_df.shape[0]))
 
         # Keep SNPs where l2 score is in range
         l2same = candidate_df["l2_bin"] == test_l2bin
         candidate_df = candidate_df.loc[l2same, :]
-        print(candidate_df.shape)
+        print(" after l2 match: {0}".format(candidate_df.shape[0]))
 
         # Keep SNPs where interval outside test_interval_exp
         iscontained = candidate_df.loc[:, "interval"].apply(
             lambda x: x.is_contained_in(test_interval_exp))
         candidate_df = candidate_df.loc[~iscontained, :]
-        print(candidate_df.shape)
+        print(" after position exclusion: {0}".format(candidate_df.shape[0]))
+
+        # For each feature column, keep snps that match test feature
+        for col in feat_cols:
+            test_featbool = test_row[col]
+            matches = candidate_df.loc[:, col].apply(
+                                                 lambda x: x == test_featbool)
+            candidate_df = candidate_df.loc[matches, :]
+            print(" after {0} feature match: {1}".format(col,
+                                                         candidate_df.shape[0]))
 
         # Warnings
         cand_size = candidate_df.shape[0]
@@ -497,6 +530,10 @@ def parse_arguments():
         help=('Store log rather than print to stdout.'),
         action='store_true',
         default=False)
+    parser.add_argument('--features', metavar="<txt file>",
+        help=('Genomic features to match profile on. Each file should be a'
+              ' list of SNP names which share a feature.'),
+        nargs='*')
     # Add test options
     parser.add_argument('--test', choices=["lower", "upper", "two"],
         help=('Select one-tailed [upper/lower] or two-tailed test. '
