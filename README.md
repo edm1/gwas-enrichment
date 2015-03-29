@@ -1,5 +1,5 @@
 # GWAS Enrichment
-Cross-trait enrichment using GWAS summary stats. Top SNPs from a reference GWAS are tested for enrichment in a second GWAS. For each top SNP, above a set threshold, a null distribution of test statistics that have a similar profile (MAF, LD score, genomic feature) is sampled. SNPs from a second GWAS are compared to the corresponding null distribution to test for enrichment.
+Cross-trait enrichment using GWAS summary stats. Top SNPs from a reference GWAS are tested for enrichment in a second GWAS. For each top SNP above a set threshold, a null distribution of test statistics that have a similar profile (MAF, LD score, genomic feature) is sampled. SNPs from a second GWAS are compared to the corresponding null distribution to test for enrichment.
 
 #### Dependancies
 - Python >=2.7 (not tested with python >= 3)
