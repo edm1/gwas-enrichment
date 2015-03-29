@@ -38,8 +38,9 @@ positional arguments:
                         null.
   <test sum stats>      GWAS summary stats to test for enrichment.
   <ld score file>       List of LD score files to be merged. LD scores can be
-                        downloaded from https://github.com/bulik/ldsc/#where-
-                        can-i-get-ld-scores
+                        generated using ldscr from
+                        https://github.com/bulik/ldsc/#where-can-i-get-ld-
+                        scores
 
 optional arguments:
   -h, --help            show this help message and exit
@@ -57,7 +58,7 @@ optional arguments:
                         (default: 100,000)
   --testposrange <int kb>
                         Test SNPs are excluded if there is another test SNP
-                        with lower p-value within this genomic range. Useful
+                        with higher p-value within this genomic range. Useful
                         to reduce multiple testing burden. (default: None)
   --ldmap <plink ld file>
                         LD map output from plink --r2. Used to exclude test
@@ -76,7 +77,7 @@ optional arguments:
   --bpcol <str>         Column with SNP position. (default: position)
   --chrcol <str>        Column with chromosome number. (default:
                         alternate_ids)
-  --pcol <str>          Column with chromosome number. (default:
+  --pcol <str>          Column with p-value significance. (default:
                         frequentist_add_pvalue)
   --mafcol <str>        Column with MAF. (default: all_maf)
   --sep <str>           Column separater. (default: tab)
