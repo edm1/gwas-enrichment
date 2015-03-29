@@ -14,10 +14,18 @@ Require python packages can be install using pip
 pip install numpy pandas HTSeq statsmodels
 ```
 
-#### Usage
+#### Quick usage
 
 ```
-usage: gwas-enrichment.py [-h] [--features [<txt file> [<txt file> ...]]]
+python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.l2.ldscore.gz>
+```
+
+#### Full options
+
+```
+usage: gwas-enrichment.py [-h] --ldscstats <ld score file>
+                          [<ld score file> ...]
+                          [--features [<txt file> [<txt file> ...]]]
                           [--out <out prefix>] [--log]
                           [--test {lower,upper,two}] [--topthresh <float>]
                           [--nullsize <int>] [--testposrange <int kb>]
@@ -27,8 +35,7 @@ usage: gwas-enrichment.py [-h] [--features [<txt file> [<txt file> ...]]]
                           [--snpcol <str>] [--bpcol <str>] [--chrcol <str>]
                           [--pcol <str>] [--mafcol <str>] [--sep <str>]
                           [--missing <str> [<str> ...]]
-                          <reference sum stats> <test sum stats> <ld score
-                          file> [<ld score file> ...]
+                          <reference sum stats> <test sum stats>
 
 GWAS stats enrichment
 
@@ -37,13 +44,14 @@ positional arguments:
                         GWAS summary stats for selecting top SNPS and creating
                         null.
   <test sum stats>      GWAS summary stats to test for enrichment.
-  <ld score file>       List of LD score files to be merged. LD scores can be
-                        generated using ldscr from
-                        https://github.com/bulik/ldsc/#where-can-i-get-ld-
-                        scores
 
 optional arguments:
   -h, --help            show this help message and exit
+  --ldscstats <ld score file> [<ld score file> ...]
+                        List of LD score files to be merged. LD scores can be
+                        generated using ldscr from
+                        https://github.com/bulik/ldsc/#where-can-i-get-ld-
+                        scores
   --features [<txt file> [<txt file> ...]]
                         Genomic features to match profile on. Each file should
                         be a list of SNP names which share a feature.
@@ -83,4 +91,5 @@ optional arguments:
   --sep <str>           Column separater. (default: tab)
   --missing <str> [<str> ...]
                         List of values to use as missing. (default: . "" NA)
+
 ```
