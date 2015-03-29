@@ -13,6 +13,7 @@ Require python packages can be install using pip
 ```
 pip install numpy pandas HTSeq statsmodels
 ```
+### Usage
 
 #### Quick usage
 
@@ -20,7 +21,7 @@ pip install numpy pandas HTSeq statsmodels
 python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.l2.ldscore.gz>
 ```
 
-#### Full options
+#### Full usage
 
 ```
 usage: gwas-enrichment.py [-h] --ldscstats <ld score file>
