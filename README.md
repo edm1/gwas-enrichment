@@ -13,7 +13,7 @@ Required python packages can be install using pip.
 ```
 pip install numpy pandas HTSeq statsmodels
 ```
-### Usage
+## Usage
 
 #### Quick usage
 
