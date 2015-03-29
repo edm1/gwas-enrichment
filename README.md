@@ -15,7 +15,7 @@ pip install numpy pandas HTSeq statsmodels
 ```
 ## Usage
 
-#### Quick usage
+#### Basic usage
 
 ```
 python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.l2.ldscore.gz>
