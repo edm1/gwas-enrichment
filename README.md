@@ -20,7 +20,7 @@ pip install numpy pandas HTSeq statsmodels
 ```
 python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.l2.ldscore.gz>
 
-Input:
+          Input files
 <reference sum stats>   GWAS summary stats to create null reference
                         distribution.
      <test sum stats>   GWAS summary stats to test for enrichment.
