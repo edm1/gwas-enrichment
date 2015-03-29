@@ -70,20 +70,22 @@ def main():
     # Exclude test snps that are similar to each other
     #
 
-    refdf_excluded = None
+    
 
     # Exclude test SNPs that are close to each other
+    refdf_posexcluded = None
     if args.testposrange:
         print("Excluding test snps close to each other in genome...")
-        refdf_test, refdf_excluded = exclude_test_snps_range(refdf_test)
-        print(" {0} test snps excluded".format(refdf_excluded.shape[0]))
+        refdf_test, refdf_posexcluded = exclude_test_snps_range(refdf_test)
+        print(" {0} test snps excluded".format(refdf_posexcluded.shape[0]))
         print(" {0} test snps kept".format(refdf_test.shape[0]))
 
     # Exclude test SNPs that are in high LD
+    refdf_r2excluded = None
     if args.ldmap:
         print("Excluding high r2 test snps...")
-        refdf_test, refdf_excluded = exclude_test_snps_LD(refdf_test)
-        print(" {0} test snps excluded".format(refdf_excluded.shape[0]))
+        refdf_test, refdf_r2excluded = exclude_test_snps_LD(refdf_test)
+        print(" {0} test snps excluded".format(refdf_r2excluded.shape[0]))
         print(" {0} test snps kept".format(refdf_test.shape[0]))
 
     # Give warning if nullsize is greater than pool of null snps
@@ -103,7 +105,10 @@ def main():
     print("Saving copy of sampled SNPs and test SNPs...")
     outname = args.out + "_test-snps.tsv"
     refdf_test.to_csv(outname, sep="\t", header=True, index=False)
-    if not refdf_excluded is None:
+    if not refdf_posexcluded is None:
+        outname = args.out + "_pos-excluded-test-snps.tsv"
+        refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
+    if not refdf_posexcluded is None:
         outname = args.out + "_r2-excluded-test-snps.tsv"
         refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
     outname = args.out + "_null-dist-snps.tsv"
@@ -609,9 +614,9 @@ def parse_arguments():
         default="lower")
     parser.add_argument('--topthresh', metavar="<float>",
         help=('SNPs below this p-value threshold will be used for test. '
-              '(default: 1e-5)'),
+              '(default: 1e-6)'),
         type=float,
-        default=1e-5)
+        default=1e-6)
     parser.add_argument('--nullsize', metavar="<int>",
         help=('Number of SNPs to sample for null distribution.'
              ' (default: 100,000)'),
@@ -619,7 +624,7 @@ def parse_arguments():
         default=100000)
 
     # Exclude similar test snps
-    parser.add_argument('--testposrange', metavar="<int [kb]>",
+    parser.add_argument('--testposrange', metavar="<int kb>",
         help=('Test SNPs are excluded if there is another test SNP with '
               'lower p-value within this genomic range. Useful to reduce '
               'multiple testing burden. (default: None)'),
@@ -641,7 +646,7 @@ def parse_arguments():
              ' (default: 0.02)'),
         type=float,
         default=0.02)
-    parser.add_argument('--posrange', metavar="<int (kb)>",
+    parser.add_argument('--posrange',metavar="<int kb>",
         help=('Null sample SNPs must be further than this distance from'
               ' reference SNP. (default: 1000 kb)'),
         type=int,
