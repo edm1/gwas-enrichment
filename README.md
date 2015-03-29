@@ -13,6 +13,13 @@ Required python packages can be install using pip.
 ```
 pip install numpy pandas HTSeq statsmodels
 ```
+
+To download the repository use git.
+
+```
+git clone https://github.com/edm1/gwas-enrichment.git
+```
+
 ## Usage
 
 #### Basic usage
