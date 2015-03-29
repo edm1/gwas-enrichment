@@ -113,7 +113,7 @@ Use `--features <file1.txt> <file2.txt> <...>` where each text file is a list of
 
 #### Exclude similar test SNPs
 
-Test SNPs can be excluded based on their proximity to other test SNPs or (similarly) by thier degree of LD (r2 score). SNPs are sorted by ascending P-values to ensure the most significant SNP is kept.
+Test SNPs can be excluded based on their proximity to other test SNPs or (similarly) by thier degree of LD (r2 score). This can help reduce the burden of multiple testing pre-analysis. SNPs are sorted by ascending P-values to ensure the most significant SNP is kept.
 
 To exclude by proximity use `--testposrange <int>` where int is a value in kb. For example, `--testposrange 1000` would exclude test SNPs that are within 1Mb of a SNP with a lower P-value.
 
