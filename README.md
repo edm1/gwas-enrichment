@@ -8,7 +8,7 @@ Cross-trait enrichment using GWAS summary stats
 - HTSeq
 - statsmodels
 
-Require python packages can be install using pip
+Require python packages can be install using pip.
 
 ```
 pip install numpy pandas HTSeq statsmodels
@@ -22,6 +22,8 @@ python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.
 ```
 
 #### Full usage
+
+Use `python gwas-enrichment.py --help` to see full list of options.
 
 ```
 usage: gwas-enrichment.py [-h] --ldscstats <ld score file>
