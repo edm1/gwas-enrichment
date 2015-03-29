@@ -60,7 +60,8 @@ optional arguments:
   -h, --help            show this help message and exit
   --ldscstats <ld score file> [<ld score file> ...]
                         List of LD score files to be merged. LD scores can be
-                        generated using ldsc from https://github.com/bulik/ldsc/
+                        generated using ldscr from
+                        https://github.com/bulik/ldsc/
   --features [<txt file> [<txt file> ...]]
                         Genomic features to match profile on. Each file should
                         be a list of SNP names which share a feature.
@@ -100,7 +101,6 @@ optional arguments:
   --sep <str>           Column separater. (default: tab)
   --missing <str> [<str> ...]
                         List of values to use as missing. (default: . "" NA)
-
 ```
 
 ## Recommendations
