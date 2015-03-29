@@ -1,4 +1,4 @@
-# Make addition genomic features
+## Make additional genomic features
 
 #### Dependancies
 - bedtools
