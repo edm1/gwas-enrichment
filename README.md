@@ -102,3 +102,11 @@ optional arguments:
                         List of values to use as missing. (default: . "" NA)
 
 ```
+
+## Recommendations
+
+#### Genomic features
+
+In addition to matching null distribution sample to test SNP MAF and LD scores, SNPs can be matched on genomic features (e.g. whether test SNP was exonic, intronic or intergenic).
+
+Use `--features <file1.txt> <file2.txt> ...` where each text file is a list of SNPs that share a featue. Scripts to help make exon/intron feature files are [here](make-features/make-genomic-features/).
