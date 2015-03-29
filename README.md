@@ -20,6 +20,10 @@ pip install numpy pandas HTSeq statsmodels
 ```
 python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.l2.ldscore.gz>
 ```
+- <reference sum stats> - GWAS summary stats to create null reference distribution
+- <test sum stats> - GWAS summary stats to test for enrichment
+- <*.l2.ldscore.gz> - List of ldscore files produced using ldsc (https://github.com/bulik/ldsc/)
+
 
 #### Full usage
 
@@ -53,8 +57,7 @@ optional arguments:
   --ldscstats <ld score file> [<ld score file> ...]
                         List of LD score files to be merged. LD scores can be
                         generated using ldscr from
-                        https://github.com/bulik/ldsc/#where-can-i-get-ld-
-                        scores
+                        https://github.com/bulik/ldsc/
   --features [<txt file> [<txt file> ...]]
                         Genomic features to match profile on. Each file should
                         be a list of SNP names which share a feature.
