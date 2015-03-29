@@ -109,4 +109,12 @@ optional arguments:
 
 In addition to matching null distribution sample to test SNP MAF and LD scores, SNPs can be matched on genomic features (e.g. whether test SNP was exonic, intronic or intergenic).
 
-Use `--features <file1.txt> <file2.txt> ...` where each text file is a list of SNPs that share a featue. Scripts to help make exon/intron feature files are [here](make-features/make-genomic-features/).
+Use `--features <file1.txt> <file2.txt> <...>` where each text file is a list of SNPs that share a featue. Scripts to help make exon/intron feature files are [here](make-features/make-genomic-features/).
+
+#### Exclude similar test SNPs
+
+Test SNPs can be excluded based on their proximity to other test SNPs or (similarly) by thier degree of LD (r2 score). SNPs are sorted by ascending P-values to ensure the most significant SNP is kept.
+
+To exclude by proximity use `--testposrange <int>` where int is a value in kb. For example, `--testposrange 1000` would exclude test SNPs that are within 1Mb of a SNP with a lower P-value.
+
+To exclude based on r2 scores, provide a plink LD map using `--ldmap <plink ld file>` and set the max r2 score with `--maxr2 <float>` (deafult: 0.7).
