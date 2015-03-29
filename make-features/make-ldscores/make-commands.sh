@@ -1,8 +1,4 @@
 #!/bin/sh 
-#PBS -l nodes=1:ppn=16
-#PBS -l walltime=00:00:10:00
-#PBS -N n-ldscr
-#PBS -q testq
 
 cd $PBS_O_WORKDIR
 

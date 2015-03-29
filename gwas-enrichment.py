@@ -134,11 +134,9 @@ def main():
     results_df = pd.DataFrame(results, columns=header)
     results_df = results_df.sort("enrich_pval")
     # Do multiple testing corrections
-    results_df["padj_bh01"] = multipletests(results_df["enrich_pval"],
-                                          method="fdr_bh")[1]
-    results_df["padj_bh05"] = multipletests(results_df["enrich_pval"],
-                                          method="fdr_bh",
-                                          alpha=0.05)[1]
+    mt_correct = multipletests(results_df["enrich_pval"], method="fdr_bh",
+                               alpha=0.05)[1]
+    results_df["enrich_adjusted_pval"] = mt_correct
     # Write file
     outname = args.out + "_enrichment.tsv"
     results_df.to_csv(outname, sep="\t", header=True, index=False)
@@ -586,11 +584,12 @@ def parse_arguments():
     parser.add_argument('teststats', metavar="<test sum stats>",
         help=('GWAS summary stats to test for enrichment.'),
         type=str)
-    parser.add_argument('ldscstats', metavar="<ld score file>",
-        help=('List of LD score files to be merged. LD scores can be downloaded'
-              ' from https://github.com/bulik/ldsc/#where-can-i-get-ld-scores'),
+    parser.add_argument('--ldscstats', metavar="<ld score file>",
+        help=('List of LD score files to be merged. LD scores can be generated'
+              ' using ldscr from https://github.com/bulik/ldsc/'),
         type=str,
-        nargs="+")
+        nargs="+",
+        required=True)
     parser.add_argument('--features', metavar="<txt file>",
         help=('Genomic features to match profile on. Each file should be a'
               ' list of SNP names which share a feature.'),
@@ -626,7 +625,7 @@ def parse_arguments():
     # Exclude similar test snps
     parser.add_argument('--testposrange', metavar="<int kb>",
         help=('Test SNPs are excluded if there is another test SNP with '
-              'lower p-value within this genomic range. Useful to reduce '
+              'higher p-value within this genomic range. Useful to reduce '
               'multiple testing burden. (default: None)'),
         type=int,
         default=None)
@@ -674,7 +673,8 @@ def parse_arguments():
         type=str,
         default="alternate_ids")
     parser.add_argument('--pcol', metavar="<str>",
-        help='Column with chromosome number. (default: frequentist_add_pvalue)',
+        help=('Column with p-value significance. '
+              '(default: frequentist_add_pvalue)'),
         type=str,
         default="frequentist_add_pvalue")
     parser.add_argument('--mafcol', metavar="<str>",
