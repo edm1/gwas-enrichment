@@ -2,13 +2,13 @@
 Cross-trait enrichment using GWAS summary stats
 
 #### Dependancies
-- Python (>=3.2)
+- Python >=2.7 (not tested with python >= 3)
 - pandas
 - numpy
 - HTSeq
 - statsmodels
 
-Require python packages can be install using pip.
+Required python packages can be install using pip.
 
 ```
 pip install numpy pandas HTSeq statsmodels
