@@ -20,12 +20,12 @@ pip install numpy pandas HTSeq statsmodels
 ```
 python gwas-enrichment.py <reference sum stats> <test sum stats> --ldscstats <*.l2.ldscore.gz>
 
-           Input file
-<reference sum stats>   GWAS summary stats to create null reference
-                        distribution.
-     <test sum stats>   GWAS summary stats to test for enrichment.
-          --ldscstats   List of LD score files to be merged. LD scores can be
-                        generated using ldsc.
+                Input    Description
+<reference sum stats>    GWAS summary stats to create null reference
+                         distribution.
+     <test sum stats>    GWAS summary stats to test for enrichment.
+          --ldscstats    List of LD score files to be merged. LD scores can be
+                         generated using ldsc.
 
 ```
 Where:
