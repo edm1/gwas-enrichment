@@ -26,4 +26,4 @@ bash 2_gtf-to-bed.sh <gtf gz> <snps.bed> <outprefix>
 - snpinexon.txt - list of SNP ids that are located in exons
 - snpinintron.txt - list of SNP ids that are located in introns
 
-You can then use `--features snpinexon.txt snpinintron.txt` to include the features in the enrichment analysis. The `2_gtf-to-bed.sh` could be adapted to extract different feature sets.
+You can then use `--features snpinexon.txt snpinintron.txt` to include the features in the enrichment analysis. The `2_gtf-to-bed.sh` could be adapted to extract different feature sets. At the moment it only extracts exons and introns from protein coding transcripts.
