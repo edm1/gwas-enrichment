@@ -35,6 +35,10 @@ def main():
         log_h = open(outname, "w")
         sys.stdout = log_h
 
+    #
+    # Load input
+    #
+
     # Load reference df
     print("Loading reference sum stats...")
     refdf = load_sumstats(args.refstats)
@@ -59,19 +63,39 @@ def main():
     refdf_null = refdf.loc[~istestsnp, :]
     print(" {0} test snps with p-value < {1} found".format(refdf_test.shape[0],
                                                            args.topthresh))
+    if refdf_test.shape[0] == 0:
+        sys.exit("Exiting: No test SNPs found.")
+
+    #
+    # Exclude test snps that are similar to each other
+    #
+
+    refdf_excluded = None
+
+    # Exclude test SNPs that are close to each other
+    if args.testposrange:
+        print("Excluding test snps close to each other in genome...")
+        refdf_test, refdf_excluded = exclude_test_snps_range(refdf_test)
+        print(" {0} test snps excluded".format(refdf_excluded.shape[0]))
+        print(" {0} test snps kept".format(refdf_test.shape[0]))
 
     # Exclude test SNPs that are in high LD
-    print("Excluding high r2 test snps...")
-    refdf_test, refdf_excluded = exclude_test_snps(refdf_test)
-    print(" {0} test snps excluded".format(refdf_excluded.shape[0]))
-    print(" {0} test snps kept".format(refdf_test.shape[0]))
+    if args.ldmap:
+        print("Excluding high r2 test snps...")
+        refdf_test, refdf_excluded = exclude_test_snps_LD(refdf_test)
+        print(" {0} test snps excluded".format(refdf_excluded.shape[0]))
+        print(" {0} test snps kept".format(refdf_test.shape[0]))
 
     # Give warning if nullsize is greater than pool of null snps
     if args.topthresh > refdf_null.shape[0]:
         message = ("Warning: --nullsize is greater than the total number of"
                    "null snps.")
         print(message)
-    
+
+    #
+    # Sample null distribution match each of the test SNPs
+    #
+
     # For each test snp sample null snps with a similar profile
     sampled_df = sample_null_dist(refdf_test, refdf_null, feat_cols)
 
@@ -79,16 +103,11 @@ def main():
     print("Saving copy of sampled SNPs and test SNPs...")
     outname = args.out + "_test-snps.tsv"
     refdf_test.to_csv(outname, sep="\t", header=True, index=False)
-    outname = args.out + "_r2-excluded-test-snps.tsv"
-    refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
+    if not refdf_excluded is None:
+        outname = args.out + "_r2-excluded-test-snps.tsv"
+        refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
     outname = args.out + "_null-dist-snps.tsv"
     sampled_df.to_csv(outname, sep="\t", header=True, index=False)
-
-    # Make a plot of the null
-    # from ggplot import *
-    # outname = args.out + "_null-hist.png"
-    # p = ggplot(sampled_df, aes(x='stat')) + geom_histogram()
-    # ggsave(p, outname)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Load second phenotype and compare test SNPs to null distribution
@@ -125,6 +144,44 @@ def main():
 
     return 0
 
+def exclude_test_snps_range(refdf_test):
+    """ Test snps are sorted by P-value then snps further down the list are
+        excluded if within genomc range: option --testposrange
+    """
+    # Sort by P-value so that we are always keeping the best
+    refdf_test = refdf_test.sort("p")
+
+    # Find exclusions
+    print(" making exclusions...")
+    toexclude = set([])
+    for i in range(refdf_test.shape[0]):
+        # Get test snp info
+        row = refdf_test.iloc[i, :]
+        snp = row["snp"]
+        # Skip if already excluded
+        if snp in toexclude:
+            continue
+        # Expand genomic interval
+        test_chrom = row["chr"]
+        test_bp = row["bp"]
+        test_interval_exp = GenomicInterval(str(test_chrom),
+                                            test_bp - args.testposrange * 1000,
+                                            test_bp + args.testposrange * 1000,
+                                            ".")
+        # Exclude current snp from analysis
+        refdf_test_loo = refdf_test.loc[~refdf_test.index.isin([snp]), :]
+        # Find other test SNPs in interval
+        iscontained = refdf_test_loo.loc[:, "interval"].apply(
+            lambda x: x.is_contained_in(test_interval_exp))
+        containedindex = refdf_test_loo.loc[iscontained, ].index
+        toexclude = toexclude.union(list(containedindex))
+
+    # Make exclusions
+    refdf_excluded = refdf_test.loc[refdf_test.index.isin(toexclude), :]
+    refdf_keep = refdf_test.loc[~refdf_test.index.isin(toexclude), :]
+
+    return refdf_keep, refdf_excluded
+
 def print_args(args):
     """ Print args to log.
     """
@@ -154,10 +211,10 @@ def bind_features(infile, refdf):
 
     return refdf, colname
 
-def exclude_test_snps(refdf_test):
-    """ Removes SNPs that are close to each other.
+def exclude_test_snps_LD(refdf_test):
+    """ Removes test SNPs that are in clode LD with each other.
     """
-    # Sort by P-value so that we are always keeping the 
+    # Sort by P-value so that we are always keeping the best
     refdf_test = refdf_test.sort("p")
 
     # Load LD information
@@ -299,8 +356,8 @@ def sample_null_dist(refdf_test, refdf_null, feat_cols):
         # Increase test interval by posrange
         test_interval = test_row["interval"]
         test_interval_exp = GenomicInterval(str(test_chrom),
-                                            test_bp - args.posrange,
-                                            test_bp + args.posrange,
+                                            test_bp - args.posrange * 1000,
+                                            test_bp + args.posrange * 1000,
                                             ".")
 
         # Copy df of candidate SNPs
@@ -517,7 +574,7 @@ def parse_arguments():
     # Create top level parser.
     parser = argparse.ArgumentParser(description="GWAS stats enrichment")
 
-    # Add files
+    # Add input files
     parser.add_argument('refstats', metavar="<reference sum stats>",
         help=('GWAS summary stats for selecting top SNPS and creating null.'),
         type=str)
@@ -529,9 +586,12 @@ def parse_arguments():
               ' from https://github.com/bulik/ldsc/#where-can-i-get-ld-scores'),
         type=str,
         nargs="+")
-    parser.add_argument('ldmap', metavar="<plink ld file>",
-        help=('LD map output from plink --r2'),
-        type=str)
+    parser.add_argument('--features', metavar="<txt file>",
+        help=('Genomic features to match profile on. Each file should be a'
+              ' list of SNP names which share a feature.'),
+        nargs='*')
+
+    # Add output options
     parser.add_argument('--out', metavar="<out prefix>",
         help=('Output prefix. (default: out)'),
         type=str,
@@ -540,10 +600,7 @@ def parse_arguments():
         help=('Store log rather than print to stdout.'),
         action='store_true',
         default=False)
-    parser.add_argument('--features', metavar="<txt file>",
-        help=('Genomic features to match profile on. Each file should be a'
-              ' list of SNP names which share a feature.'),
-        nargs='*')
+
     # Add test options
     parser.add_argument('--test', choices=["lower", "upper", "two"],
         help=('Select one-tailed [upper/lower] or two-tailed test. '
@@ -560,9 +617,21 @@ def parse_arguments():
              ' (default: 100,000)'),
         type=int,
         default=100000)
+
+    # Exclude similar test snps
+    parser.add_argument('--testposrange', metavar="<int [kb]>",
+        help=('Test SNPs are excluded if there is another test SNP with '
+              'lower p-value within this genomic range. Useful to reduce '
+              'multiple testing burden. (default: None)'),
+        type=int,
+        default=None)
+    parser.add_argument('--ldmap', metavar="<plink ld file>",
+        help=('LD map output from plink --r2. Used to exclude test SNPs in '
+              'high LD. Useful to reduce multiple testing burden.'),
+        type=str)
     parser.add_argument('--maxr2', metavar="<float>",
         help=('Test SNPs with r2 higher than this will be excluded. '
-              '(default: 0.7)'),
+              'Only used in conjunction with --ldmap. (default: 0.7)'),
         type=float,
         default=0.7)
     
@@ -572,11 +641,11 @@ def parse_arguments():
              ' (default: 0.02)'),
         type=float,
         default=0.02)
-    parser.add_argument('--posrange', metavar="<int>",
+    parser.add_argument('--posrange', metavar="<int (kb)>",
         help=('Null sample SNPs must be further than this distance from'
-              ' reference SNP. (default: 1,000,000)'),
+              ' reference SNP. (default: 1000 kb)'),
         type=int,
-        default=1000000)
+        default=1000)
     parser.add_argument('--ldscbins', metavar="<int>",
         help=('Number of bins to make for LD scores. (default: 10)'),
         type=float,
