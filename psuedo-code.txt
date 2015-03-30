@@ -43,7 +43,7 @@ For each test SNP
     if candidate sample size (cs) < desired sample size (ss), set ss = cs
     randomly sample (with replacement) from candidate sample to make null distribution
 
- # Load and test second phenotype GWAS summary stats
+# Load and test second phenotype GWAS summary stats
 
 Load enricment test GWAS summary stats
 
