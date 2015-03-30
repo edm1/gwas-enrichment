@@ -1,0 +1,57 @@
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+# Psuedo code describing the implementation of gwas-enrichment.py #
+# ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ #
+
+# Load reference input
+
+Load reference GWAS summary stats
+
+(Optional) Load genomic (exon, intron) features
+    merge with reference stats
+
+Load LD scores
+    make percentile bins of equal size
+    merge with reference stats
+
+Split reference SNPs into test SNPs and null SNPs
+
+# Exclude test SNPs that are similar to each other (to reduce multiple testing)
+
+(Optional) Exclude by close proximity
+    Sort test SNPs by ascending P-value
+    For each test SNP
+        Find other test SNPs with defined genomic window
+        Exclude proximal SNPs from analysis
+
+(Optional) Exclude by high LD (r2)
+    Sort test SNPs by ascending P-value
+    For each test SNP
+        Find other test SNPs that have r2 > set value
+        Exclude LD SNPs from analysis
+
+# Sample null distribution
+
+For each test SNP
+
+    Read test SNP profile: maf, position, ldscore_bin, genomic features
+    Initiate copy of null SNPs as candidate sample
+    Exclude from candidate sample if maf not within set range
+    Exclude from candidate sample if not in same ldscore bin
+    Exclude from candidate sample if candidate is too close to test SNP (default: 1Mb)
+    Exclude from candidate sample if additional genomic features dont match
+
+    if candidate sample size (cs) < desired sample size (ss), set ss = cs
+    randomly sample (with replacement) from candidate sample to make null distribution
+
+ # Load and test second phenotype GWAS summary stats
+
+Load enricment test GWAS summary stats
+
+For each test SNP
+    compare test statistic to null distribution
+    count = how many times test statistic is more extreme than null (upper/lower/two-tailed)
+    p = 1 - ( count / size of null dist )
+
+Produce results table
+Apply multiple testing corrections
+(todo) Plot test SNP association p-value vs. enrichment p-value

@@ -90,8 +90,6 @@ def main():
     # Exclude test snps that are similar to each other
     #
 
-    
-
     # Exclude test SNPs that are close to each other
     refdf_posexcluded = None
     if args.testposrange:
