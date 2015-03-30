@@ -13,7 +13,7 @@ Load LD scores
     make percentile bins of equal size
     merge with reference stats
 
-Split reference SNPs into test SNPs and null SNPs
+Split reference SNPs into test SNPs and null SNPs based on p-value threshold
 
 # Exclude test SNPs that are similar to each other (to reduce multiple testing)
 
