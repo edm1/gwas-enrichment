@@ -38,7 +38,7 @@ For each test SNP
     Exclude from candidate sample if maf not within set range
     Exclude from candidate sample if not in same ldscore bin
     Exclude from candidate sample if candidate is too close to test SNP (default: 1Mb)
-    Exclude from candidate sample if additional genomic features dont match
+    (Optional) Exclude from candidate sample if additional genomic features (in exon / intron) dont match
 
     if candidate sample size (cs) < desired sample size (ss), set ss = cs
     randomly sample (with replacement) from candidate sample to make null distribution
