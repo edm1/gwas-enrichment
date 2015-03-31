@@ -73,7 +73,7 @@ def main():
 
     # Merge LD scores to reference df
     print("Loading LD scores...")
-    load_merge_ldscores(refdf, args.ldscstats)
+    refdf = load_merge_ldscores(refdf, args.ldscstats)
     print(" done")
 
     # Split refdf into test snps vs null snps
