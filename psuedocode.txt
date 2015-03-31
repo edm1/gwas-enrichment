@@ -20,7 +20,7 @@ Split reference SNPs into test SNPs and null SNPs based on p-value threshold
 (Optional) Exclude by close proximity
     Sort test SNPs by ascending P-value
     For each test SNP
-        Find other test SNPs with defined genomic window
+        Find other test SNPs within defined genomic window
         Exclude proximal SNPs from analysis
 
 (Optional) Exclude by high LD (r2)
