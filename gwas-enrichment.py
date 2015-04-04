@@ -125,10 +125,10 @@ def main():
     refdf_test.to_csv(outname, sep="\t", header=True, index=False)
     if not refdf_posexcluded is None:
         outname = args.out + "_pos-excluded-test-snps.tsv"
-        refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
-    if not refdf_posexcluded is None:
+        refdf_posexcluded.to_csv(outname, sep="\t", header=True, index=False)
+    if not refdf_r2excluded is None:
         outname = args.out + "_r2-excluded-test-snps.tsv"
-        refdf_excluded.to_csv(outname, sep="\t", header=True, index=False)
+        refdf_r2excluded.to_csv(outname, sep="\t", header=True, index=False)
     outname = args.out + "_null-dist-snps.tsv"
     sampled_df.to_csv(outname, sep="\t", header=True, index=False)
 
