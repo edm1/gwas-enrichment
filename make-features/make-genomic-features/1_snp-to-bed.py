@@ -34,7 +34,7 @@ def main():
         if snp in missing_vals:
             snp = "{0}:{1}".format(chrom, pos)
         # Print bed
-        outline = [chrom, pos, pos + 1, snp, ".", "."]
+        outline = [chrom, pos - 1, pos, snp, ".", "."]
         outline = [str(x) for x in outline]
         print("\t".join(outline))
 

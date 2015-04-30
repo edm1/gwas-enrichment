@@ -129,8 +129,9 @@ def main():
     if not refdf_r2excluded is None:
         outname = args.out + "_r2-excluded-test-snps.tsv"
         refdf_r2excluded.to_csv(outname, sep="\t", header=True, index=False)
-    outname = args.out + "_null-dist-snps.tsv"
-    sampled_df.to_csv(outname, sep="\t", header=True, index=False)
+    if not args.supress:
+        outname = args.out + "_null-dist-snps.tsv"
+        sampled_df.to_csv(outname, sep="\t", header=True, index=False)
 
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
     # Load second phenotype and compare test SNPs to null distribution
@@ -618,6 +619,10 @@ def parse_arguments():
         help=('Output prefix. (default: out)'),
         type=str,
         default="out")
+    parser.add_argument('--supress',
+        help=("Suppress null dist output which is very large. (default: False)"),
+        action="store_true",
+        default=False)
     parser.add_argument('--log',
         help=('Store log rather than print to stdout.'),
         action='store_true',
