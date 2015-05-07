@@ -55,6 +55,10 @@ def main():
         log_h = open(outname, "w")
         sys.stdout = log_h
 
+    # Set seed
+    if not args.randseed:
+        np.random.seed(123)
+
     #
     # Load input
     #
@@ -120,7 +124,7 @@ def main():
     sampled_df = sample_null_dist(refdf_test, refdf_null, feat_cols)
 
     # Output test snps and sample dataframes
-    print("Saving copy of sampled SNPs and test SNPs...")
+    print("\nSaving copy of sampled SNPs and test SNPs...")
     outname = args.out + "_test-snps.tsv"
     refdf_test.to_csv(outname, sep="\t", header=True, index=False)
     if not refdf_posexcluded is None:
@@ -137,20 +141,38 @@ def main():
     # Load second phenotype and compare test SNPs to null distribution
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    # Load data
-    print("Loading test dataset...")
-    testdf = load_sumstats(args.teststats)
+    # Name to give reference set
+    refname = os.path.split(args.refstats)[1]
+    # Make empty results folder
+    header = ["ref_file", "test_file", "snp", "chr", "pos", "maf", "stat",
+              "enrich_pval", "null_size"]
+    results_df = pd.DataFrame(columns=header)
+    
+    for testfile in args.teststats:
 
-    # Get test snps
-    testdf_test = testdf.loc[refdf_test.index, :]
+        # Name to give test set
+        testname = os.path.split(testfile)[1]
 
-    # For each test SNP compare stat is null distribution
-    results = compare_tests_to_null(testdf_test, sampled_df)
+        # Load data
+        print(" Loading test dataset {0}...".format(testname))
+        testdf = load_sumstats(testfile)
+        # Get test snps
+        testdf_test = testdf.loc[refdf_test.index, :]
 
-    # Prepare results file
-    print("Writing results...")
-    header = ["snp", "chr", "pos", "maf", "stat", "enrich_pval", "null_size"]
-    results_df = pd.DataFrame(results, columns=header)
+        # For each test SNP compare stat is null distribution
+        results = compare_tests_to_null(testdf_test, sampled_df)
+
+        # Prepare results file
+        print(" Appending results...")
+
+        # Add ref and testname to each result row
+        results = [[refname, testname] + x for x in results]
+        temp_df = pd.DataFrame(results, columns=header)
+        # Append rows to results df
+        results_df = results_df.append(temp_df)
+
+    print("Writing output...")
+    # Sort by pval
     results_df = results_df.sort("enrich_pval")
     # Do multiple testing corrections
     mt_correct = multipletests(results_df["enrich_pval"], method="fdr_bh",
@@ -604,8 +626,10 @@ def parse_arguments():
         help=('GWAS summary stats for selecting top SNPS and creating null.'),
         type=str)
     parser.add_argument('teststats', metavar="<test sum stats>",
-        help=('GWAS summary stats to test for enrichment.'),
-        type=str)
+        help=('GWAS summary stat files to test for enrichment. Multiple test '
+              'files can be tested at once against the same reference null.'),
+        type=str,
+        nargs="+")
     parser.add_argument('--ldscstats', metavar="<ld score file>",
         help=('List of LD score files to be merged. LD scores can be generated'
               ' using ldscr from https://github.com/bulik/ldsc/'),
@@ -680,6 +704,10 @@ def parse_arguments():
         help=('Number of bins to make for LD scores. (default: 10)'),
         type=float,
         default=10)
+    parser.add_argument('--randseed',
+        help=('Use a random seed instead of 123.'),
+        action="store_true",
+        default=False)
     
     # Add column name args
     parser.add_argument('--testcol', metavar="<str>",
