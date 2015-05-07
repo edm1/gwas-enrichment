@@ -167,8 +167,9 @@ def main():
 
         # Add ref and testname to each result row
         results = [[refname, testname] + x for x in results]
-        temp_df = pd.DataFrame(results, columns=header)
+        
         # Append rows to results df
+        temp_df = pd.DataFrame(results, columns=header)
         results_df = results_df.append(temp_df)
 
     print("Writing output...")
