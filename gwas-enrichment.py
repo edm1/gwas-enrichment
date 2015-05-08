@@ -141,8 +141,6 @@ def main():
     # Load second phenotype and compare test SNPs to null distribution
     # ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-    # Name to give reference set
-    refname = os.path.split(args.refstats)[1]
     # Make empty results folder
     header = ["ref_file", "test_file", "snp", "chr", "pos", "maf", "stat",
               "enrich_pval", "null_size"]
@@ -150,8 +148,12 @@ def main():
     
     for testfile in args.teststats:
 
-        # Name to give test set
-        testname = os.path.split(testfile)[1]
+        # Name to give ref and test set
+        uniq_names = uniq_name_path([args.refstats, testfile])
+        # Skip if None (ref and test were the same file)
+        if uniq_names is None:
+            continue
+        refname, testname = uniq_names
 
         # Load data
         print(" Loading test dataset {0}...".format(testname))
@@ -752,6 +754,26 @@ def parse_arguments():
     # Parse the arguments
     return args
 
+def uniq_name_path(path_list):
+    """ Returns the shortest path suffix that identifies a file uniquely. (I'm
+        sure there must be an easier way to do this)
+    """
+    # Convert paths to absolutes and normalise
+    normpath_list = [os.path.normpath(os.path.abspath(x)) for x in path_list]
+    # Check that no two paths are identical
+    if len(set(normpath_list)) != len(path_list):
+        return None
+    # Find shortest suffix
+    normpath_lol = [x.split(os.sep) for x in normpath_list]
+    unzipped = zip(*normpath_lol)
+    for i in xrange(len(unzipped) - 1, -1, -1):
+        j = i
+        if len(set(unzipped[i])) == len(path_list):
+            break
+    shortestsuffix = zip(*unzipped[j:])
+    # Coverts back to path
+    uniqpaths = [reduce(os.path.join, x) for x in shortestsuffix]
+    return uniqpaths
 
 if __name__ == '__main__':
 
