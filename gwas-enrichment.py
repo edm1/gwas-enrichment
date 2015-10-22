@@ -363,7 +363,7 @@ def compare_tests_to_null(testdf_test, sampled_df):
         elif args.test == "two":
             counts = abs(test_stat) < np.absolute(null_dist)
         # Covert to pval
-        pval = (float(sum(counts)) + 1) / (null_size + 1)
+        pval = float(sum(counts) + 1) / (null_size + 1)
         if args.test == "two":
             pval = pval / 2
         pval = 1 - pval
